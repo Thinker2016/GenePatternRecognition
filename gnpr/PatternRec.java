@@ -5,8 +5,9 @@ import java.io.*;
 import bean.*;
 
 /**
- * @author Wenzhao
+ * 基因序列匹配算法
  *
+ * @author Wenzhao
  */
 public class PatternRec {
 
@@ -16,28 +17,45 @@ public class PatternRec {
 	private File outputFile;
 	private int fragLen;
 	private int subRefLen;
+	private String unknownStr;
+	private int matchSize;
 	private String refStr;
 	private String tarStr;
-	private int matchSize;
+	private int refStart;
 
+	/**
+	 * 计算基因序列匹配信息
+	 */
 	public void calculate() {
 		genePosInfoMap = new TreeMap<>();
-		refStr = readFromGeneFile(refFile);
-		tarStr = readFromGeneFile(tarFile);
+		GeneStr refGeneStr = readFromGeneFile(refFile);
+		GeneStr tarGeneStr = readFromGeneFile(tarFile);
+		refStr = refGeneStr.getContent();
+		tarStr = tarGeneStr.getContent();
+		refStart = refGeneStr.getStart();
 		int len = new Double(Math.ceil((refStr.length() / new Double(subRefLen)))).intValue();
 		System.out.println(len);
 		matchSize = 0;
-		for (int i = 0; i < 1; i++) {
+		for (int i = 0; i < len; i++) {
 			int start = i * subRefLen;
 			int end = i == len - 1 ? refStr.length() : (i + 1) * subRefLen;
 			String subRefStr = refStr.substring(start, end);
-			HashMap<Integer, List<Fragment>> refMap = createRefMap(subRefStr, start);
+			HashMap<Integer, List<Fragment>> refMap = createRefMap(subRefStr, refStart + start);
 			String subTarStr = tarStr.substring(start, end);
-			calculateGenePosInfo(refMap, subTarStr, start);
+			calculateGenePosInfo(refMap, subTarStr, refStart + start);
 		}
 		System.out.println(matchSize);
 	}
 
+	/**
+	 * 为源序列的子序列建立基因片段的哈系索引
+	 *
+	 * @param subRefStr
+	 *            源序列的子序列
+	 * @param startIndex
+	 *            源序列子序列的起始位置
+	 * @return
+	 */
 	public HashMap<Integer, List<Fragment>> createRefMap(String subRefStr, int startIndex) {
 		HashMap<Integer, List<Fragment>> refMap = new HashMap<>();
 		int length = subRefStr.length() - fragLen + 1;
@@ -45,6 +63,8 @@ public class PatternRec {
 			int start = i;
 			int end = i == length - 1 ? subRefStr.length() : i + fragLen;
 			String fragStr = subRefStr.substring(start, end);
+			if (fragStr.equals(unknownStr))
+				continue;
 			Fragment frag = new Fragment();
 			frag.setContent(fragStr);
 			frag.setStartIndex(startIndex + start);
@@ -62,6 +82,16 @@ public class PatternRec {
 		return refMap;
 	}
 
+	/**
+	 * 查找目标序列子序列与源序列子序列的匹配片段
+	 *
+	 * @param refMap
+	 *            源序列子序列的哈希索引
+	 * @param subTarStr
+	 *            目标序列的子序列
+	 * @param startIndex
+	 *            目标序列子序列的起始位置
+	 */
 	public void calculateGenePosInfo(HashMap<Integer, List<Fragment>> refMap, String subTarStr, int startIndex) {
 		int len = new Double(Math.ceil((subTarStr.length() / new Double(fragLen)))).intValue();
 		for (int i = 0; i < len; i++) {
@@ -84,12 +114,24 @@ public class PatternRec {
 							int nextTarFragEnd = tarReachEnd ? tarStr.length() : t + fragLen;
 							String adFragStr = refStr.substring(k, nextFragEnd);
 							String adTarFragStr = tarStr.substring(t, nextTarFragEnd);
-							if (!adFragStr.equals(adTarFragStr) || fragReachEnd || tarReachEnd) {
+							if (!adFragStr.equals(adTarFragStr) || adFragStr.equals(unknownStr) || fragReachEnd
+									|| tarReachEnd) {
 								matching = false;
-								int length = fragEnd - elem.getStartIndex();
+								int length;
 								List<GenePosInfo> list;
-								GenePosInfo info = new GenePosInfo(elem.getStartIndex(), fragEnd, startIndex + start,
-										startIndex + tarFragEnd);
+								length = nextFragEnd - elem.getStartIndex();
+								int infoFragEnd, infoTarFragEnd;
+								if (!adFragStr.equals(adTarFragStr) || adFragStr.equals(unknownStr)) {
+									length = fragEnd - elem.getStartIndex();
+									infoFragEnd = fragEnd;
+									infoTarFragEnd = tarFragEnd;
+								} else {
+									length = nextFragEnd - elem.getStartIndex();
+									infoFragEnd = nextFragEnd;
+									infoTarFragEnd = nextTarFragEnd;
+								}
+								GenePosInfo info = new GenePosInfo(elem.getStartIndex(), infoFragEnd,
+										startIndex + start, startIndex + infoTarFragEnd);
 								if (genePosInfoMap.containsKey(length)) {
 									list = genePosInfoMap.get(length);
 									list.add(info);
@@ -98,9 +140,9 @@ public class PatternRec {
 									list.add(info);
 									genePosInfoMap.put(length, list);
 								}
-								if (fragEnd - elem.getStartIndex() > 16)
-									System.out.println(elem.getStartIndex() + " " + fragEnd + " " + (startIndex + start)
-											+ " " + (startIndex + tarFragEnd));
+								if (fragEnd - elem.getStartIndex() > fragLen * 2)
+									System.out.println(elem.getStartIndex() + " " + infoFragEnd + " "
+											+ (startIndex + start) + " " + (startIndex + infoTarFragEnd));
 								if (fragEnd - elem.getStartIndex() > matchSize)
 									matchSize = fragEnd - elem.getStartIndex();
 							} else {
@@ -114,7 +156,14 @@ public class PatternRec {
 		}
 	}
 
-	public String readFromGeneFile(File file) {
+	/**
+	 * 从基因序列文件中读取字符串
+	 *
+	 * @param file
+	 *            基因序列文件
+	 * @return 序列信息
+	 */
+	public GeneStr readFromGeneFile(File file) {
 		StringBuffer buffer = new StringBuffer();
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(file));
@@ -128,17 +177,36 @@ public class PatternRec {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		String str = buffer.toString().replaceAll("[^ACGTacgt]", "");
-		return str;
+		// String str = buffer.toString().replaceAll("[^ACGTacgt]", "");
+		String bufferStr = buffer.toString();
+		char[] charArr = bufferStr.toCharArray();
+		Set<Character> charSet = new HashSet<>(Arrays.asList('A', 'C', 'G', 'T', 'a', 'c', 'g', 't'));
+		int start = 0, end = 0;
+		for (int i = 0; i < charArr.length; i++)
+			if (charSet.contains(charArr[i])) {
+				start = i;
+				break;
+			}
+		for (int i = charArr.length - 1; i > -1; i--)
+			if (charSet.contains(charArr[i])) {
+				end = i + 1;
+				break;
+			}
+		String str = bufferStr.substring(start, end);
+		return new GeneStr(str, start, end);
 	}
 
+	/**
+	 * 将匹配信息输出至文件
+	 */
 	public void writeToOutput() {
 		try {
 			BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile));
 			Set<Integer> set = genePosInfoMap.keySet();
-			for (int elem : set) {
-				bw.write("长度为" + elem + "的匹配串有：\n");
-				List<GenePosInfo> genePosInfoList = genePosInfoMap.get(elem);
+			Integer[] keyArr = set.toArray(new Integer[set.size()]);
+			for (int i = keyArr.length - 1; i > -1; i--) {
+				bw.write("长度为" + keyArr[i] + "的匹配串有：\n");
+				List<GenePosInfo> genePosInfoList = genePosInfoMap.get(keyArr[i]);
 				for (GenePosInfo info : genePosInfoList)
 					bw.write(info.toString());
 				bw.write('\n');
@@ -151,17 +219,40 @@ public class PatternRec {
 		}
 	}
 
+	/**
+	 * 调用程序逻辑函数
+	 *
+	 * @param refPath
+	 *            源文件的路径
+	 * @param tarPath
+	 *            目标文件的路径
+	 * @param outputPath
+	 *            输出文件的路径
+	 * @param fragLen
+	 *            片段长度
+	 * @param subRefLen
+	 *            子序列长度
+	 */
 	public PatternRec(String refPath, String tarPath, String outputPath, int fragLen, int subRefLen) {
 		refFile = new File(refPath);
 		tarFile = new File(tarPath);
 		outputFile = new File(outputPath);
 		this.fragLen = fragLen;
 		this.subRefLen = subRefLen;
+		char[] unknown = new char[fragLen];
+		for (int i = 0; i < unknown.length; i++)
+			unknown[i] = 'n';
+		this.unknownStr = new String(unknown);
 		calculate();
 		writeToOutput();
 		System.out.println(genePosInfoMap.size());
 	}
 
+	/**
+	 *
+	 * @param args
+	 *            根目录、源文件路径、目标文件路径、输出文件路径、片段长度、子序列长度
+	 */
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 		String baseDir = args[0];
