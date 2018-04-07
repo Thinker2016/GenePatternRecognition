@@ -1,6 +1,8 @@
 package bean;
 
 /**
+ * 基因序列片段
+ *
  * @author Wenzhao
  *
  */

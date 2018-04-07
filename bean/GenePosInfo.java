@@ -1,6 +1,8 @@
 package bean;
 
 /**
+ * 基因序列匹配信息
+ *
  * @author Wenzhao
  *
  */
