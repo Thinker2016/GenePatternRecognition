@@ -22,6 +22,7 @@ public class PatternRec {
 	private String refStr;
 	private String tarStr;
 	private int refStart;
+	private int tarStart;
 
 	/**
 	 * 计算基因序列匹配信息
@@ -33,6 +34,7 @@ public class PatternRec {
 		refStr = refGeneStr.getContent();
 		tarStr = tarGeneStr.getContent();
 		refStart = refGeneStr.getStart();
+		tarStart = tarGeneStr.getStart();
 		int len = new Double(Math.ceil((refStr.length() / new Double(subRefLen)))).intValue();
 		System.out.println(len);
 		matchSize = 0;
@@ -42,7 +44,7 @@ public class PatternRec {
 			String subRefStr = refStr.substring(start, end);
 			HashMap<Integer, List<Fragment>> refMap = createRefMap(subRefStr, refStart + start);
 			String subTarStr = tarStr.substring(start, end);
-			calculateGenePosInfo(refMap, subTarStr, refStart + start);
+			calculateGenePosInfo(refMap, subTarStr, tarStart + start);
 		}
 		System.out.println(matchSize);
 	}
@@ -119,7 +121,6 @@ public class PatternRec {
 								matching = false;
 								int length;
 								List<GenePosInfo> list;
-								length = nextFragEnd - elem.getStartIndex();
 								int infoFragEnd, infoTarFragEnd;
 								if (!adFragStr.equals(adTarFragStr) || adFragStr.equals(unknownStr)) {
 									length = fragEnd - elem.getStartIndex();
@@ -143,8 +144,8 @@ public class PatternRec {
 								if (fragEnd - elem.getStartIndex() > fragLen * 2)
 									System.out.println(elem.getStartIndex() + " " + infoFragEnd + " "
 											+ (startIndex + start) + " " + (startIndex + infoTarFragEnd));
-								if (fragEnd - elem.getStartIndex() > matchSize)
-									matchSize = fragEnd - elem.getStartIndex();
+								if (length > matchSize)
+									matchSize = length;
 							} else {
 								fragEnd = nextFragEnd;
 								tarFragEnd = nextTarFragEnd;
