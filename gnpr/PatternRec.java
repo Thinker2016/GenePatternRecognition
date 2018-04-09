@@ -54,7 +54,7 @@ public class PatternRec {
 	 *            源序列的子序列
 	 * @param startIndex
 	 *            源序列子序列的起始位置
-	 * @return
+	 * @return 哈希索引
 	 */
 	public HashMap<Integer, List<Fragment>> createRefMap(String subRefStr, int startIndex) {
 		HashMap<Integer, List<Fragment>> refMap = new HashMap<>();
@@ -251,7 +251,7 @@ public class PatternRec {
 	/**
 	 *
 	 * @param args
-	 *            根目录、源文件路径、目标文件路径、输出文件路径、片段长度、子序列长度
+	 *            目录、源文件名、目标文件名、输出文件名、片段长度、子序列长度
 	 */
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
