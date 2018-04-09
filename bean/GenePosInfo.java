@@ -52,6 +52,11 @@ public class GenePosInfo {
 		this.tarEnd = tarEnd;
 	}
 
+	public boolean contains(GenePosInfo info) {
+		return this.refStart <= info.refStart && this.refEnd >= info.refEnd && this.tarStart <= info.tarStart
+				&& this.tarEnd >= info.tarEnd;
+	}
+
 	@Override
 	public String toString() {
 		return refStart + " " + refEnd + " " + tarStart + " " + tarEnd + "\n";
