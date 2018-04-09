@@ -38,6 +38,7 @@ public class PatternRec {
 		int len = new Double(Math.ceil((refStr.length() / new Double(subRefLen)))).intValue();
 		System.out.println(len);
 		matchSize = 0;
+		long startTime = System.currentTimeMillis();
 		for (int i = 0; i < len; i++) {
 			int start = i * subRefLen;
 			int end = i == len - 1 ? refStr.length() : (i + 1) * subRefLen;
@@ -46,6 +47,9 @@ public class PatternRec {
 			String subTarStr = tarStr.substring(start, end);
 			calculateGenePosInfo(refMap, subTarStr, tarStart + start);
 		}
+		prune();
+		long endTime = System.currentTimeMillis();
+		System.out.println(endTime - startTime);
 		System.out.println(matchSize);
 	}
 
@@ -141,9 +145,6 @@ public class PatternRec {
 									list.add(info);
 									genePosInfoMap.put(length, list);
 								}
-								if (fragEnd - elem.getStartIndex() > fragLen * 2)
-									System.out.println(elem.getStartIndex() + " " + infoFragEnd + " "
-											+ (startIndex + start) + " " + (startIndex + infoTarFragEnd));
 								if (length > matchSize)
 									matchSize = length;
 							} else {
@@ -198,6 +199,27 @@ public class PatternRec {
 	}
 
 	/**
+	 * 删除多余的匹配信息
+	 */
+	public void prune() {
+		Set<Integer> set = genePosInfoMap.keySet();
+		Integer[] matchLens = set.toArray(new Integer[set.size()]);
+		for (int i = matchLens.length - 1; i > 0; i--) {
+			for (int j = i - 1; j > -1; j--) {
+				List<GenePosInfo> toBeRemoved = new ArrayList<>();
+				for (GenePosInfo elem0 : genePosInfoMap.get(matchLens[i])) {
+					for (GenePosInfo elem1 : genePosInfoMap.get(matchLens[j])) {
+						if (elem0.contains(elem1)) {
+							toBeRemoved.add(elem1);
+						}
+					}
+				}
+				genePosInfoMap.get(matchLens[j]).removeAll(toBeRemoved);
+			}
+		}
+	}
+
+	/**
 	 * 将匹配信息输出至文件
 	 */
 	public void writeToOutput() {
@@ -211,6 +233,9 @@ public class PatternRec {
 				for (GenePosInfo info : genePosInfoList)
 					bw.write(info.toString());
 				bw.write('\n');
+				if (i > 1)
+					for (GenePosInfo info : genePosInfoList)
+						System.out.print(info);
 			}
 			bw.flush();
 			bw.close();
